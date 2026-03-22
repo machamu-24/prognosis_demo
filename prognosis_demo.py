@@ -1,7 +1,8 @@
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
+import json
+from pathlib import Path
 
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -20,137 +21,22 @@ from sklearn.metrics import (
 from sklearn.calibration import CalibrationDisplay
 
 
-# =========================
-# 1. ダミーデータ生成
-# =========================
-def clip_round(values, min_value, max_value):
-    values = np.round(values).astype(int)
-    return np.clip(values, min_value, max_value)
-
-
-def generate_dummy_data(n=300, random_state=42):
-    rng = np.random.default_rng(random_state)
-
-    # -------------------------
-    # A. 基本属性の生成
-    # -------------------------
-    # 年齢: 50-95歳, 平均75歳前後
-    age = rng.normal(loc=75, scale=8, size=n)
-    age = np.clip(age, 50, 95).round(0)
-
-    # 発症から入院までの日数: 7-60日, やや右裾
-    onset_days = rng.gamma(shape=4.0, scale=6.0, size=n) + 5
-    onset_days = np.clip(onset_days, 7, 60).round(0)
-
-    # 潜在重症度（見えない要因の一部）
-    # 値が大きいほど重い
-    latent_severity = rng.normal(loc=0.0, scale=1.0, size=n)
-
-    # -------------------------
-    # B. 順序尺度変数の生成
-    # 緩い相関を持たせる
-    # -------------------------
-    # 下肢機能 1-5
-    leg_func_score = (
-        3.2
-        - 0.03 * (age - 75)
-        - 0.02 * (onset_days - 25)
-        - 0.8 * latent_severity
-        + rng.normal(0, 0.8, size=n)
-    )
-    leg_func = clip_round(leg_func_score, 1, 5)
-
-    # 体幹・基本動作 1-3
-    trunk_score = (
-        2.1
-        - 0.02 * (age - 75)
-        - 0.02 * (onset_days - 25)
-        - 0.6 * latent_severity
-        + 0.25 * (leg_func - 3)
-        + rng.normal(0, 0.6, size=n)
-    )
-    trunk = clip_round(trunk_score, 1, 3)
-
-    # 入院時歩行レベル 0-3
-    gait_score = (
-        1.4
-        - 0.03 * (age - 75)
-        - 0.02 * (onset_days - 25)
-        - 0.8 * latent_severity
-        + 0.55 * (leg_func - 3)
-        + 0.45 * (trunk - 2)
-        + rng.normal(0, 0.7, size=n)
-    )
-    gait_adm = clip_round(gait_score, 0, 3)
-
-    # -------------------------
-    # C. アウトカム生成
-    # 退院時歩行自立（0/1）
-    # -------------------------
-    # 主効果 + 潜在ノイズ
-    logit = (
-        -1.0
-        - 0.045 * (age - 75)
-        - 0.025 * (onset_days - 25)
-        + 1.15 * gait_adm
-        + 0.60 * leg_func
-        + 0.85 * trunk
-        - 0.50 * latent_severity
-        + rng.normal(0, 0.8, size=n)
-    )
-
-    p = 1 / (1 + np.exp(-logit))
-    outcome = rng.binomial(1, p, size=n)
-
-    # -------------------------
-    # D. 観測ノイズ
-    # -------------------------
-    # 1) 測定誤差: 7%の症例で順序尺度を±1ずらす
-    def add_measurement_noise(arr, min_value, max_value, noise_rate=0.07):
-        arr = arr.copy()
-        mask = rng.random(n) < noise_rate
-        shift = rng.choice([-1, 1], size=n)
-        arr[mask] = np.clip(arr[mask] + shift[mask], min_value, max_value)
-        return arr
-
-    gait_adm = add_measurement_noise(gait_adm, 0, 3, noise_rate=0.07)
-    leg_func = add_measurement_noise(leg_func, 1, 5, noise_rate=0.07)
-    trunk = add_measurement_noise(trunk, 1, 3, noise_rate=0.07)
-
-    # 2) ラベル反転: 4%
-    flip_mask = rng.random(n) < 0.04
-    outcome[flip_mask] = 1 - outcome[flip_mask]
-
-    # 3) 欠損: onset_days, leg_func, trunk に各4%
-    def add_missing(arr, missing_rate=0.04):
-        arr = arr.astype(float).copy()
-        mask = rng.random(n) < missing_rate
-        arr[mask] = np.nan
-        return arr
-
-    onset_days = add_missing(onset_days, missing_rate=0.04)
-    leg_func = add_missing(leg_func, missing_rate=0.04)
-    trunk = add_missing(trunk, missing_rate=0.04)
-
-    # DataFrame化
-    df = pd.DataFrame(
-        {
-            "age": age,
-            "onset_days": onset_days,
-            "gait_adm": gait_adm,
-            "leg_func": leg_func,
-            "trunk": trunk,
-            "independent_walking_discharge": outcome,
-        }
-    )
-
-    return df
+FEATURE_COLUMNS = ["age", "onset_days", "fac_adm", "fma_le_adm", "tis_adm"]
+TARGET_COLUMN = "independent_walking_discharge"
+MAX_FAC_ADMISSION = 3
+DATASET_PATH = Path("dummy_prognosis_data.csv")
+LOGISTIC_MODEL_PATH = Path("logistic_model.joblib")
+TREE_MODEL_PATH = Path("tree_model.joblib")
+METRICS_PATH = Path("model_metrics.json")
 
 
 # =========================
-# 2. データ確認
+# 1. データ確認
 # =========================
 def summarize_data(df):
+    print(f"\n=== デモ対象 ===\n入院時FAC 0-{MAX_FAC_ADMISSION}")
+    print(f"対象症例数: {len(df)}")
+
     print("\n=== 先頭5行 ===")
     print(df.head())
 
@@ -160,19 +46,19 @@ def summarize_data(df):
     print("\n=== 記述統計 ===")
     print(df.describe(include="all"))
 
-    outcome_rate = df["independent_walking_discharge"].mean()
+    outcome_rate = df[TARGET_COLUMN].mean()
     print(f"\n退院時歩行自立率: {outcome_rate:.3f}")
 
+    print("\n=== FAC入院時別 自立率 ===")
+    print(df.groupby("fac_adm")[TARGET_COLUMN].agg(["count", "mean"]))
+
 
 # =========================
-# 3. 学習・評価
+# 2. 学習・評価
 # =========================
 def train_and_evaluate(df):
-    feature_cols = ["age", "onset_days", "gait_adm", "leg_func", "trunk"]
-    target_col = "independent_walking_discharge"
-
-    X = df[feature_cols]
-    y = df[target_col]
+    X = df[FEATURE_COLUMNS]
+    y = df[TARGET_COLUMN]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -239,7 +125,7 @@ def train_and_evaluate(df):
     lr_coef = logistic_model.named_steps["model"].coef_[0]
     coef_df = pd.DataFrame(
         {
-            "feature": feature_cols,
+            "feature": FEATURE_COLUMNS,
             "coefficient": lr_coef,
         }
     ).sort_values("coefficient", ascending=False)
@@ -274,7 +160,7 @@ def train_and_evaluate(df):
     tree_clf = tree_model.named_steps["model"]
     importances = tree_clf.feature_importances_
     imp_df = pd.DataFrame(
-        {"feature": feature_cols, "importance": importances}
+        {"feature": FEATURE_COLUMNS, "importance": importances}
     ).sort_values("importance", ascending=True)
 
     axes[1, 2].barh(imp_df["feature"], imp_df["importance"])
@@ -283,71 +169,91 @@ def train_and_evaluate(df):
 
     plt.tight_layout()
     plt.savefig("model_evaluation.png", dpi=150)
-    plt.show()
+    plt.close(fig)
 
     # 決定木の図
-    plt.figure(figsize=(14, 8))
+    fig_tree, ax_tree = plt.subplots(figsize=(14, 8))
     plot_tree(
         tree_clf,
-        feature_names=feature_cols,
+        feature_names=FEATURE_COLUMNS,
         class_names=["non-independent", "independent"],
         filled=True,
         rounded=True,
         fontsize=9,
+        ax=ax_tree,
     )
-    plt.title("Decision Tree")
-    plt.tight_layout()
-    plt.savefig("decision_tree.png", dpi=150)
-    plt.show()
+    ax_tree.set_title("Decision Tree")
+    fig_tree.tight_layout()
+    fig_tree.savefig("decision_tree.png", dpi=150)
+    plt.close(fig_tree)
 
-    return logistic_model, tree_model
-
-
-# =========================
-# 4. 単一症例の予測
-# =========================
-def predict_single_case(model):
-    # サンプル症例
-    sample = pd.DataFrame(
-        [
-            {
-                "age": 72,
-                "onset_days": 20,
-                "gait_adm": 2,
-                "leg_func": 3,
-                "trunk": 2,
+    metrics = {
+        "cohort": f"入院時FAC 0-{MAX_FAC_ADMISSION}",
+        "dataset_size": int(len(df)),
+        "outcome_rate": float(y.mean()),
+        "fac_distribution": {
+            str(int(index)): {
+                "count": int(row["count"]),
+                "mean": float(row["mean"]),
             }
-        ]
-    )
+            for index, row in df.groupby("fac_adm")[TARGET_COLUMN].agg(["count", "mean"]).iterrows()
+        },
+        "models": {
+            "logistic": {
+                "auroc": float(auc_lr),
+                "brier": float(brier_lr),
+                "accuracy": float((y_pred_lr == y_test).mean()),
+                "confusion_matrix": cm_lr.tolist(),
+            },
+            "tree": {
+                "auroc": float(auc_tree),
+                "brier": float(brier_tree),
+                "accuracy": float((y_pred_tree == y_test).mean()),
+                "confusion_matrix": cm_tree.tolist(),
+            },
+        },
+        "feature_coefficients": {
+            row["feature"]: float(row["coefficient"])
+            for _, row in coef_df.iterrows()
+        },
+    }
 
-    prob = model.predict_proba(sample)[0, 1]
-    pred = int(prob >= 0.5)
-
-    print("\n=== 単一症例予測 ===")
-    print(sample)
-    print(f"歩行自立確率: {prob:.3f}")
-    print(f"予測ラベル  : {pred} (1=自立, 0=非自立)")
+    return logistic_model, tree_model, metrics
 
 
 # =========================
-# 5. main
+# 3. main
 # =========================
 def main():
-    df = pd.read_csv("dummy_prognosis_data.csv")
+    if not DATASET_PATH.exists():
+        raise FileNotFoundError(
+            "dummy_prognosis_data.csv が見つかりません。"
+            " 先に `python generate_dummy_data.py` を実行してください。"
+        )
 
-    # CSV保存
-    #df.to_csv("dummy_prognosis_data.csv", index=False)
-    #print("dummy_prognosis_data.csv を保存しました。")
+    df = pd.read_csv(DATASET_PATH)
+    df = df[df["fac_adm"] <= MAX_FAC_ADMISSION].copy()
+
+    if df.empty:
+        raise ValueError("FAC 0-3 の症例がありません。ダミーデータ生成条件を確認してください。")
 
     summarize_data(df)
 
-    logistic_model, tree_model = train_and_evaluate(df)
+    logistic_model, tree_model, metrics = train_and_evaluate(df)
 
-    joblib.dump(logistic_model, "logistic_model.joblib")
-    joblib.dump(tree_model, "tree_model.joblib")
-    print("学習済みモデルを保存しました。")
-
-    predict_single_case(logistic_model)
+    joblib.dump(logistic_model, LOGISTIC_MODEL_PATH)
+    joblib.dump(tree_model, TREE_MODEL_PATH)
+    METRICS_PATH.write_text(
+        json.dumps(metrics, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print("\n学習済みモデルを保存しました。")
+    print(f"- {LOGISTIC_MODEL_PATH}")
+    print(f"- {TREE_MODEL_PATH}")
+    print(f"- {METRICS_PATH}")
+    print("評価図を保存しました。")
+    print("- model_evaluation.png")
+    print("- decision_tree.png")
 
 
 if __name__ == "__main__":
