@@ -142,7 +142,7 @@ export default function DemoPage() {
   return (
     <main className="shell shell--page">
       <section className="page-head page-head--demo">
-        <p className="eyebrow">Live Demo</p>
+        <p className="eyebrow">予測デモ</p>
         <h1>提案デモとして伝わる流れに整える</h1>
         <p className="muted">
           まず主モデルの予測と根拠を示し、その後に症例比較で介入の意味を見せます。
@@ -174,14 +174,14 @@ export default function DemoPage() {
           type="button"
           onClick={() => setMode("single")}
         >
-          単一症例デモ
+          単一症例の予測
         </button>
         <button
           className={`mode-switch__button ${mode === "compare" ? "is-active" : ""}`}
           type="button"
           onClick={() => setMode("compare")}
         >
-          症例比較モード
+          2症例の比較
         </button>
       </section>
 
@@ -190,7 +190,7 @@ export default function DemoPage() {
       {mode === "single" ? (
         <section className="demo-grid">
           <PatientForm
-            actionLabel="主モデルで予測する"
+            actionLabel="予測する"
             disabled={loadingState === "single"}
             metadata={metadata}
             mode="single"
@@ -199,7 +199,7 @@ export default function DemoPage() {
             onSubmit={runSinglePrediction}
             samples={samples}
             subtitle="ロジスティック回帰を主表示にした提案デモです。"
-            title="Primary Case"
+            title="症例データ"
             values={primaryCase}
           />
           <PredictionPanel prediction={primaryPrediction} />
@@ -210,7 +210,7 @@ export default function DemoPage() {
             <section className="panel panel--soft">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Preset Pair</p>
+                  <p className="eyebrow">プリセット</p>
                   <h3>プレゼンしやすい組み合わせを選ぶ</h3>
                 </div>
               </div>

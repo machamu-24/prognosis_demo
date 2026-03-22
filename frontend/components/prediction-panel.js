@@ -12,15 +12,51 @@ function narrative(probability) {
 }
 
 
+function ProbabilityBar({ probability }) {
+  const pct = (probability * 100).toFixed(1);
+  const hue = probability < 0.3 ? 0 : probability < 0.7 ? 38 : 152;
+  const color = `hsl(${hue}, 72%, 42%)`;
+
+  return (
+    <div style={{ marginTop: "12px" }}>
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "baseline",
+        marginBottom: "6px"
+      }}>
+        <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.65)" }}>歩行自立確率</span>
+        <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.65)" }}>100%</span>
+      </div>
+      <div style={{
+        height: "10px",
+        borderRadius: "999px",
+        background: "rgba(255,255,255,0.15)",
+        overflow: "hidden"
+      }}>
+        <div style={{
+          height: "100%",
+          width: `${pct}%`,
+          borderRadius: "999px",
+          background: color,
+          transition: "width 600ms cubic-bezier(0.4, 0, 0.2, 1)"
+        }} />
+      </div>
+    </div>
+  );
+}
+
+
 function ProbabilitySummary({ result }) {
   return (
     <article className="result-hero">
-      <p className="eyebrow">Primary Model</p>
+      <p className="eyebrow" style={{ color: "rgba(255,255,255,0.6)" }}>主モデル（ロジスティック回帰）</p>
       <div className="result-hero__value">{(result.probability * 100).toFixed(1)}%</div>
       <div className="result-hero__meta">
         <span className={`pill pill--${result.band.tone}`}>{result.band.label}</span>
-        <span>{result.prediction === 1 ? "退院時歩行自立を予測" : "退院時非自立を予測"}</span>
+        <span style={{ fontSize: "0.875rem" }}>{result.prediction === 1 ? "退院時歩行自立を予測" : "退院時非自立を予測"}</span>
       </div>
+      <ProbabilityBar probability={result.probability} />
       <p className="result-hero__narrative">{narrative(result.probability)}</p>
     </article>
   );
@@ -38,7 +74,7 @@ function DriverSummary({ explanation }) {
     <section className="panel panel--soft">
       <div className="section-head">
         <div>
-          <p className="eyebrow">Talk Track</p>
+          <p className="eyebrow">判断の要点</p>
           <h3>この症例で何を説明するか</h3>
         </div>
       </div>
@@ -71,11 +107,14 @@ export function PredictionPanel({ prediction }) {
   if (!prediction) {
     return (
       <section className="panel panel--placeholder">
-        <p className="eyebrow">Result</p>
-        <h3>主モデルの予測結果</h3>
-        <p className="muted">
-          ロジスティック回帰を主表示とし、確率・判定・判断根拠を1つの流れで示します。
-        </p>
+        <div>
+          <p className="eyebrow">予測結果</p>
+          <h3 style={{ marginTop: "8px" }}>主モデルの予測結果</h3>
+          <p className="muted" style={{ marginTop: "8px", maxWidth: "28rem" }}>
+            左の入力フォームに症例データを入力し、「予測する」ボタンを押してください。
+            ロジスティック回帰による確率・判定・判断根拠が表示されます。
+          </p>
+        </div>
       </section>
     );
   }
@@ -85,7 +124,7 @@ export function PredictionPanel({ prediction }) {
       <section className="panel panel--result">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Primary Prediction</p>
+            <p className="eyebrow">予測結果</p>
             <h3>ロジスティック回帰による予測</h3>
           </div>
         </div>
@@ -115,7 +154,7 @@ export function PredictionPanel({ prediction }) {
       <details className="panel panel--soft comparison-disclosure">
         <summary>
           <div>
-            <p className="eyebrow">Secondary Model</p>
+            <p className="eyebrow">補助モデル</p>
             <h3>決定木の補助比較を見る</h3>
           </div>
           <span className="comparison-disclosure__value">
@@ -128,13 +167,13 @@ export function PredictionPanel({ prediction }) {
           </p>
           <div className="compare-table">
             <div className="compare-row compare-row--quad compare-row--head">
-              <span>Model</span>
-              <span>Probability</span>
-              <span>Band</span>
-              <span>Prediction</span>
+              <span>モデル</span>
+              <span>確率</span>
+              <span>判定</span>
+              <span>予測</span>
             </div>
             <div className="compare-row compare-row--quad">
-              <span>Decision Tree</span>
+              <span>決定木</span>
               <span>{(prediction.tree.probability * 100).toFixed(1)}%</span>
               <span>{prediction.tree.band.label}</span>
               <span>{prediction.tree.prediction === 1 ? "自立" : "非自立"}</span>

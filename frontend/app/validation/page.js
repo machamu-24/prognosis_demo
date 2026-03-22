@@ -53,7 +53,7 @@ export default function ValidationPage() {
   return (
     <main className="shell shell--page">
       <section className="page-head">
-        <p className="eyebrow">Validation</p>
+        <p className="eyebrow">モデル検証</p>
         <h1>PoC としての妥当性を、誠実に見せる</h1>
         <p className="muted">
           主モデルはロジスティック回帰です。ここでは対象コホート、メトリクス、synthetic data
@@ -63,7 +63,7 @@ export default function ValidationPage() {
 
       <section className="validation-banner">
         <div>
-          <p className="eyebrow">Important Note</p>
+          <p className="eyebrow" style={{ color: "var(--warning)" }}>注意事項</p>
           <h3>本デモは synthetic data に基づく PoC です。</h3>
         </div>
         <p>
@@ -91,7 +91,7 @@ export default function ValidationPage() {
               <article className="panel panel--soft">
                 <div className="section-head">
                   <div>
-                    <p className="eyebrow">About This Dataset</p>
+                    <p className="eyebrow">データセット概要</p>
                     <h3>今回学習に使ったダミーデータ</h3>
                   </div>
                 </div>
@@ -122,7 +122,7 @@ export default function ValidationPage() {
               <article className="panel panel--soft">
                 <div className="section-head">
                   <div>
-                    <p className="eyebrow">Generation Logic</p>
+                    <p className="eyebrow">生成ロジック</p>
                     <h3>どう作ったデータか</h3>
                   </div>
                 </div>
@@ -147,15 +147,15 @@ export default function ValidationPage() {
             <article className="panel panel--soft">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Primary Model</p>
+                  <p className="eyebrow">主モデル</p>
                   <h3>ロジスティック回帰を中心に説明する</h3>
                 </div>
               </div>
               <div className="compare-table">
                 <div className="compare-row compare-row--triple compare-row--head">
-                  <span>Metric</span>
-                  <span>Value</span>
-                  <span>Interpretation</span>
+                  <span>指標</span>
+                  <span>値</span>
+                  <span>解釈</span>
                 </div>
                 <div className="compare-row compare-row--triple">
                   <span>AUROC</span>
@@ -178,7 +178,7 @@ export default function ValidationPage() {
             <article className="panel panel--soft">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Cohort Shape</p>
+                  <p className="eyebrow">コホート分布</p>
                   <h3>FAC別の自立率</h3>
                 </div>
               </div>
@@ -202,23 +202,23 @@ export default function ValidationPage() {
             </article>
           </section>
 
-          <section className="panel panel--soft">
+          <section className="panel panel--soft" style={{ marginBottom: "24px" }}>
             <div className="section-head">
               <div>
-                <p className="eyebrow">Model Comparison</p>
+                <p className="eyebrow">モデル比較</p>
                 <h3>補助モデルは比較にとどめる</h3>
               </div>
             </div>
             <div className="compare-table">
               <div className="compare-row compare-row--quad compare-row--head">
-                <span>Model</span>
+                <span>モデル</span>
                 <span>AUROC</span>
                 <span>Brier</span>
                 <span>Accuracy</span>
               </div>
               {Object.entries(metrics.models).map(([name, model]) => (
                 <div className="compare-row compare-row--quad" key={name}>
-                  <span>{name}</span>
+                  <span>{name === "logistic" ? "ロジスティック回帰" : "決定木"}</span>
                   <span>{model.auroc.toFixed(3)}</span>
                   <span>{model.brier.toFixed(3)}</span>
                   <span>{model.accuracy.toFixed(3)}</span>
@@ -229,12 +229,12 @@ export default function ValidationPage() {
 
           <section className="visual-grid">
             <article className="panel panel--visual">
-              <p className="eyebrow">Artifacts</p>
+              <p className="eyebrow">可視化</p>
               <h3>評価サマリー</h3>
               <img alt="model evaluation" src={`${apiBase}/artifacts/model_evaluation.png`} />
             </article>
             <article className="panel panel--visual">
-              <p className="eyebrow">Artifacts</p>
+              <p className="eyebrow">可視化</p>
               <h3>決定木</h3>
               <img alt="decision tree" src={`${apiBase}/artifacts/decision_tree.png`} />
             </article>

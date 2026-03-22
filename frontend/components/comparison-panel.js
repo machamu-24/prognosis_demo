@@ -36,11 +36,13 @@ export function ComparisonPanel({
   if (!leftPrediction || !rightPrediction) {
     return (
       <section className="panel panel--placeholder">
-        <p className="eyebrow">Compare</p>
-        <h3>症例比較モード</h3>
-        <p className="muted">
-          2つの症例を入力すると、ロジスティック回帰の確率差と主要因子の差分を比較できます。
-        </p>
+        <div>
+          <p className="eyebrow">症例比較</p>
+          <h3 style={{ marginTop: "8px" }}>症例比較モード</h3>
+          <p className="muted" style={{ marginTop: "8px", maxWidth: "28rem" }}>
+            2つの症例を入力し「比較する」ボタンを押すと、ロジスティック回帰の確率差と主要因子の差分を比較できます。
+          </p>
+        </div>
       </section>
     );
   }
@@ -56,7 +58,7 @@ export function ComparisonPanel({
       <section className="panel panel--result">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Comparison</p>
+            <p className="eyebrow">比較結果</p>
             <h3>ロジスティック回帰による症例比較</h3>
           </div>
         </div>
@@ -75,7 +77,7 @@ export function ComparisonPanel({
       <section className="panel panel--soft">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Presentation Cue</p>
+            <p className="eyebrow">説明のポイント</p>
             <h3>差分をどう話すか</h3>
           </div>
         </div>
@@ -100,13 +102,13 @@ export function ComparisonPanel({
       <section className="panel panel--soft">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Driver Shift</p>
+            <p className="eyebrow">因子の変化</p>
             <h3>主要因子の差分</h3>
           </div>
         </div>
         <div className="compare-table">
           <div className="compare-row compare-row--quad compare-row--head">
-            <span>Feature</span>
+            <span>特徴量</span>
             <span>{leftLabel}</span>
             <span>{rightLabel}</span>
             <span>差分</span>

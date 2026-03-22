@@ -23,7 +23,7 @@ export function PatientForm({
     <section className={`panel patient-panel patient-panel--${mode}`}>
       <div className="section-head">
         <div>
-          <p className="eyebrow">Case Input</p>
+          <p className="eyebrow">症例入力</p>
           <h3>{title}</h3>
           {subtitle ? <p className="muted patient-panel__subtitle">{subtitle}</p> : null}
         </div>
@@ -51,23 +51,33 @@ export function PatientForm({
                 <div className="field__head">
                   <span>{config.label}</span>
                   <small className="field__hint">
-                    {config.min} - {config.max}
+                    {config.min} — {config.max}
                   </small>
                 </div>
-                <input
-                  max={config.max}
-                  min={config.min}
-                  step={config.step}
-                  type="number"
-                  value={values[key]}
-                  onChange={(event) => onChange(key, event.target.value)}
-                />
+                <div className="field__input-row">
+                  <input
+                    max={config.max}
+                    min={config.min}
+                    step={config.step}
+                    type="range"
+                    value={values[key]}
+                    onChange={(event) => onChange(key, event.target.value)}
+                  />
+                  <input
+                    max={config.max}
+                    min={config.min}
+                    step={config.step}
+                    type="number"
+                    value={values[key]}
+                    onChange={(event) => onChange(key, event.target.value)}
+                  />
+                </div>
               </label>
             ))
           : null}
 
         {showSubmitButton ? (
-          <div className="button-row">
+          <div className="button-row" style={{ marginTop: "8px" }}>
             <button className="button button--primary" disabled={disabled} type="submit">
               {disabled ? "予測中..." : actionLabel}
             </button>

@@ -12,16 +12,16 @@ export function ExplanationBars({ explanation }) {
     <section className="panel panel--soft">
       <div className="section-head">
         <div>
-          <p className="eyebrow">Explanation</p>
-          <h3>ロジスティック回帰の判断根拠</h3>
+          <p className="eyebrow">判断根拠</p>
+          <h3>各特徴量の寄与度</h3>
         </div>
         <div className="compact-stat">
           <span>合計 log-odds</span>
           <strong>{explanation.log_odds.toFixed(3)}</strong>
         </div>
       </div>
-      <p className="muted">
-        正の寄与は自立方向、負の寄与は非自立方向です。切片は{" "}
+      <p className="muted" style={{ marginBottom: "4px" }}>
+        正の寄与は自立方向、負の寄与は非自立方向を示します。切片は{" "}
         {explanation.intercept.toFixed(3)} です。
       </p>
       <div className="explanation-list">
@@ -30,7 +30,7 @@ export function ExplanationBars({ explanation }) {
           return (
             <div className="explanation-row" key={item.feature}>
               <div className="explanation-copy">
-                <strong>{item.label}</strong>
+                <strong style={{ fontSize: "0.875rem" }}>{item.label}</strong>
                 <span>入力値: {item.raw_value.toFixed(1)}</span>
               </div>
               <div className="explanation-track">
@@ -50,4 +50,3 @@ export function ExplanationBars({ explanation }) {
     </section>
   );
 }
-
